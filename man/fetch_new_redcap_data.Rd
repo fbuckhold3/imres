@@ -30,20 +30,20 @@ fetch_new_redcap_data(
 \item{...}{Additional arguments to be passed to the API function.}
 }
 \value{
-A data frame containing the combined and wrangled dataset. 
+A data frame containing the combined and wrangled dataset.
 This dataset includes new records (if available) along with the previous data.
 }
 \description{
-Pulls and wrangles new data from RedCap based on a timestamp column. 
-This function retrieves new data from the RedCap API for records that have 
+Pulls and wrangles new data from RedCap based on a timestamp column.
+This function retrieves new data from the RedCap API for records that have
 a timestamp greater than or equal to the most recent timestamp in the existing dataset.
-It then combines the new data with the existing data, applies a wrangling 
+It then combines the new data with the existing data, applies a wrangling
 function to the combined dataset, and removes duplicate records.
 }
 \details{
-The function retrieves the most recent date in the `timestamp_column` of the 
-existing dataset and uses it to filter records in RedCap using a `filterLogic` parameter. 
-Records with timestamps greater than or equal to the most recent date are pulled from 
+The function retrieves the most recent date in the `timestamp_column` of the
+existing dataset and uses it to filter records in RedCap using a `filterLogic` parameter.
+Records with timestamps greater than or equal to the most recent date are pulled from
 RedCap and combined with the existing dataset.
 
 **Key Features:**
@@ -56,17 +56,7 @@ RedCap and combined with the existing dataset.
 - If the **wrangle_function** encounters an error, the function will print debug information and stop execution.
 - The **dplyr::distinct()** function is applied to the final dataset to ensure there are no duplicate rows.
 }
-\examples{
-\dontrun
-# Example Usage
-new_eval_data <- fetch_new_redcap_data(
-  token = eval_token, 
-  url = "https://redcap.yourinstitution.edu/api/", 
-  data = ass_dat, 
-  timestamp_column = 'assess_a_resident_timestamp', 
-  wrangle_function = wrangle_assessment_data, 
-  api_function = redcap_api_call
-)
+
 
 # Save the updated dataset
 saveRDS(new_eval_data, "path/to/ass_dat.rds")

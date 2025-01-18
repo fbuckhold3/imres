@@ -1,15 +1,15 @@
 Type: Package
 Package: imres
-Title: What the Package Does (Title Case)
+Title: IM Residency Data Management Support Functions
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line) Use four
-    spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Fred Buckhold
+Maintainer: Fred Buckhold <fred.buckhold@health.slu.edu>
+Description:This serves as a support package for various shiny apps intending for a residency data management platform. This is initially to be used for the local residency with a conception towards scale. Many functions will be used in various dashboards but in this package form to reduce code complexity with uploading into shiny apps. 
+License: MIT
 Imports: 
     devtools,
     dplyr,
+    DT, 
     httr,
     jsonlite,
     lubridate,
