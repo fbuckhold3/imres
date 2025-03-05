@@ -1,5 +1,8 @@
-# imres/R/theme.R
 #' Apply Standard imres Theme
+#'
+#' This function applies the standard imres styling to a Shiny application.
+#'
+#' @return A tags$style object with HTML CSS
 #' @export
 imres_theme <- function() {
   tags$style(HTML(paste0("
@@ -13,10 +16,23 @@ imres_theme <- function() {
   ")))
 }
 
-
-# imres/R/css_loader.R
 #' Load Custom imres CSS
+#'
+#' This function loads the custom CSS file for imres applications.
+#'
+#' @return A tags$link object pointing to the CSS file
 #' @export
 imres_css <- function() {
   tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
 }
+
+#' Get Path to imres Logo
+#'
+#' This function returns the file path to the imres logo.
+#'
+#' @return A character string with the path to the logo file
+#' @export
+imres_logo <- function() {
+  system.file("www/slu_logo.png", package = "imres")
+}
+
