@@ -7,12 +7,12 @@
 extract_url(html_content)
 }
 \arguments{
-\item{html_content}{A character string containing the raw HTML response, 
-typically returned from an API request where the URL is embedded inside 
+\item{html_content}{A character string containing the raw HTML response,
+typically returned from an API request where the URL is embedded inside
 tags like `<p>...</p>`.}
 }
 \value{
-A character string containing the extracted URL. If no URL is 
+A character string containing the extracted URL. If no URL is
 found, the function returns `NA`.
 }
 \description{

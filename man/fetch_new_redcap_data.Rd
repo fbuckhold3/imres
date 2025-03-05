@@ -56,13 +56,6 @@ RedCap and combined with the existing dataset.
 - If the **wrangle_function** encounters an error, the function will print debug information and stop execution.
 - The **dplyr::distinct()** function is applied to the final dataset to ensure there are no duplicate rows.
 }
-
-
-# Save the updated dataset
-saveRDS(new_eval_data, "path/to/ass_dat.rds")
-
-
-}
 \seealso{
 - [redcap_api_call()]: Used to call the RedCap API.
 - [dplyr::distinct()]: Used to remove duplicate rows from the combined dataset.

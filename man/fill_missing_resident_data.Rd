@@ -24,11 +24,10 @@ This file contains utility functions for data cleaning prior to visualization an
 - `archive`: Filters out archived residents from datasets.
 
 These utilities are essential for ensuring complete and accurate data for visualization and analysis.
-
 Fill Missing Names and Record IDs
 
 Ensures that each row in the provided dataframe has complete 'name' and 'record_id' columns.
-The function fills missing 'name' and 'record_id' using lookup logic, where information 
+The function fills missing 'name' and 'record_id' using lookup logic, where information
 is propagated within the dataframe using `left_join()` and `tidyr::fill()`.
 }
 \examples{

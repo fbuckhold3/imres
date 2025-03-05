@@ -27,16 +27,16 @@ merge_old_new_data(
 A data frame containing the merged data, with duplicates removed.
 }
 \description{
-Merges old data (saved as an `.rds` file) with new data pulled from the REDCap API. 
-It performs a full join on a user-defined key (default is "record_id") and 
+Merges old data (saved as an `.rds` file) with new data pulled from the REDCap API.
+It performs a full join on a user-defined key (default is "record_id") and
 removes any duplicate rows from the combined dataset.
 }
 \examples{
 \dontrun{
  merged_data <- merge_old_new_data(
-   old_data_path = "data/old_data.rds", 
-   token = "your_redcap_token", 
-   url = "https://redcap.yourinstitution.edu/api/", 
+   old_data_path = "data/old_data.rds",
+   token = "your_redcap_token",
+   url = "https://redcap.yourinstitution.edu/api/",
    timestamp_columns = c("event_timestamp", "another_timestamp")
  )
 }
