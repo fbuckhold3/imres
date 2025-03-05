@@ -31,11 +31,10 @@ imres_css <- function() {
 
 #' Get Path to imres Logo
 #'
-#' This function returns the file path to the imres logo.
-#'
-#' @return A character string with the path to the logo file
+#' @return A string containing the file path to the logo
 #' @export
 imres_logo <- function() {
-  system.file("www/ssm_slucare.png", package = "imres")
+  # For Shiny apps, we just need the filename, not the full system path
+  return("ssm_slucare.png")
 }
 

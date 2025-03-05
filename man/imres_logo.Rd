@@ -7,8 +7,8 @@
 imres_logo()
 }
 \value{
-A character string with the path to the logo file
+A string containing the file path to the logo
 }
 \description{
-This function returns the file path to the imres logo.
+Get Path to imres Logo
 }
