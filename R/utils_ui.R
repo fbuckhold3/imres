@@ -1,3 +1,6 @@
+#' @importFrom shiny tags HTML
+NULL
+
 #' Apply Standard imres Theme
 #'
 #' This function applies the standard imres styling to a Shiny application.
