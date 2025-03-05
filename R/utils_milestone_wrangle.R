@@ -1,3 +1,91 @@
+# =====================================================
+# 📄 **Milestone Data Wrangling Utilities**
+#
+# This file contains utility functions for cleaning and processing milestone data
+# for use in data visualization, analysis, and reporting. The primary goal is to
+# prepare "program" and "self" milestone data for radar plots, summary tables,
+# and longitudinal analyses.
+#
+# ## 📚 **Function Overview:**
+# - `get_all_milestones`: Pulls milestone data from the REDCap API.
+# - `get_milestone_columns`: Extracts milestone columns for "program" or "self" milestone types.
+# - `rename_milestone_columns`: Renames milestone columns for consistency and readability.
+# - `calculate_and_append_medians`: Calculates median milestone values and appends them to the dataset.
+# - `miles_plot`: Generates radar plots for milestone data.
+# - `process_milestones`: Processes "program" or "self" milestone data for visualization and analysis.
+# =====================================================
+
+# -----------------------------------------------------
+# 📚 **Table of Contents**
+# -----------------------------------------------------
+# 1️⃣ get_all_milestones() - Pulls all milestone data from REDCap
+# 2️⃣ get_milestone_columns() - Extracts milestone columns for "program" or "self"
+# 3️⃣ rename_milestone_columns() - Renames milestone columns for readability
+# 4️⃣ calculate_and_append_medians() - Calculates and appends median milestone rows
+# 5️⃣ miles_plot() - Generates radar plots for milestone data
+# 6️⃣ process_milestones() - Processes milestone data for "program" or "self"
+# -----------------------------------------------------
+
+
+# --------------------------------------------------------------------------
+# 1️⃣ Function: get_all_milestones
+# Purpose: Pull milestone data from the API
+# --------------------------------------------------------------------------
+#' Get All Milestones
+#'
+#' Pulls data from REDCap for the specified milestone forms.
+#'
+#' @return A data frame with all milestone data.
+#' @export
+get_all_milestones <- function(token, url) {
+  all_data <- forms_api_pull(
+    token = token,
+    url = url,
+    'resident_data',
+    'milestone_entry',
+    'milestone_selfevaluation_c33c'
+  )
+  return(all_data)
+}
+
+
+# --------------------------------------------------------------------------
+# 2️⃣ Function: get_milestone_columns
+# Purpose: Extract milestone columns for "program" or "self" milestone type
+# --------------------------------------------------------------------------
+#' Get Milestone Columns
+#'
+#' Extracts the milestone columns for either "program" or "self" milestone data.
+#'
+#' @param data The data frame containing milestone data.
+#' @param type The type of milestone, either "program" or "self".
+#' @return A vector of milestone column names.
+#' @export
+get_milestone_columns <- function(data, type = "program") {
+  if (type == "program") {
+    milestone_columns <- colnames(data)[
+      stringr::str_detect(colnames(data), "^(rep_pc|rep_mk|rep_sbp|rep_pbl|rep_prof|rep_ics)\\d*$")
+    ]
+    extra_columns <- c("prog_mile_date", "prog_mile_period", "res_archive")
+  } else if (type == "self") {
+    milestone_columns <- colnames(data)[
+      stringr::str_detect(colnames(data), "^(rep_pc|rep_mk|rep_sbp|rep_pbl|rep_prof|rep_ics)\\d*_self$")
+    ]
+    extra_columns <- c("prog_mile_date_self", "prog_mile_period_self", "res_archive")
+  } else {
+    stop("Invalid type. Must be 'program' or 'self'.")
+  }
+
+  all_columns <- c(milestone_columns, extra_columns)
+  milestone_columns <- unique(all_columns)
+  return(milestone_columns)
+}
+
+
+# --------------------------------------------------------------------------
+# 3️⃣ Function: rename_milestone_columns
+# Purpose: Rename milestone columns according to patterns
+# --------------------------------------------------------------------------
 #' Rename Milestone Columns
 #'
 #' Renames milestone columns to clean up names for plotting and analysis.
