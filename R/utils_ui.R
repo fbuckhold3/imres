@@ -36,6 +36,6 @@ imres_css <- function() {
 #' @return A character string with the path to the logo file
 #' @export
 imres_logo <- function() {
-  system.file("www/slu_logo.png", package = "imres")
+  system.file("www/ssm_slucare.png", package = "imres")
 }
 
