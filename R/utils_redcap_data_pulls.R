@@ -345,10 +345,7 @@ generate_survey_link <- function(record_id, instrument, url, token) {
 
   response <- httr::POST(url, body = formData, encode = "form")
   link <- httr::content(response)
-  return(list(
-    record_id = record_id,
-    survey_link = link
-  ))
+  return(link)
 }
 
 #' Extract URL from HTML Response
