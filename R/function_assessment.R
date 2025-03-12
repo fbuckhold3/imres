@@ -1,6 +1,597 @@
 #' Assessment Visualization
 #' The following contains functions used in various applications for visualizing data regarding assessment of residents. Includes general plus delta data, continuity clinic, inpatient, and observation assessments, with more to be added as needed.
 #'
+#'
+#'
+#' Count Resident Assessments
+#'
+#' @description Summarizes the number of assessments for a specified resident,
+#'   grouping by resident level, evaluation type, and rotation.
+#'
+#' @param data A data frame containing at least:
+#'   \describe{
+#'     \item{name}{Resident name.}
+#'     \item{Level}{Resident level (e.g., "PGY1", "PGY2").}
+#'     \item{eval_type}{Type of assessment (e.g., "Performance during the rotation").}
+#'     \item{Rotation}{Rotation name or identifier.}
+#'   }
+#' @param resident_name A character string, the name of the resident of interest.
+#'
+#' @return A data frame (tibble) with columns:
+#'   \describe{
+#'     \item{Level}{The resident level.}
+#'     \item{eval_type}{Renamed evaluation type (Summative, Continuity Clinic, or Observation).}
+#'     \item{Rotation}{Rotation name, with parentheses content removed.}
+#'     \item{Count}{How many assessments of this type/rotation/level.}
+#'   }
+#'   Returns \code{NULL} if no rows match the resident.
+#'
+#' @examples
+#' \dontrun{
+#'   df_counts <- count_res_assessments(resident_data, "John Doe")
+#' }
+#'
+#' @export
+count_res_assessments <- function(data, resident_name) {
+  eval_labels <- c("Performance during the rotation" = "Summative",
+                   "Quarterly" = "Continuity Clinic",
+                   "An observation of an activity" = "Observation")
+  plot_data <- data %>%
+    dplyr::filter(name == resident_name) %>%
+    dplyr::group_by(Level, eval_type, Rotation) %>%
+    dplyr::summarize(Count = dplyr::n(), .groups = 'drop') %>%
+    stats::na.omit() %>%
+    dplyr::mutate(eval_type = dplyr::recode(eval_type, !!!eval_labels),
+                  Rotation  = stringr::str_replace(Rotation, "\\(.*\\)", ""))
+
+  if (nrow(plot_data) == 0) {
+    return(NULL)
+  } else {
+    return(plot_data)
+  }
+}
+
+#' Count Faculty Evaluations
+#'
+#' @description Counts how many faculty evaluations (where \code{redcap_repeat_instrument}
+#'   is "Faculty Evaluation") a specified resident has completed, grouped by rotation.
+#'
+#' @param data A data frame containing at least:
+#'   \describe{
+#'     \item{name}{Resident name.}
+#'     \item{redcap_repeat_instrument}{The instrument name (e.g., "Faculty Evaluation").}
+#'     \item{rot}{Rotation identifier.}
+#'   }
+#' @param resident_name A character string, the name of the resident of interest.
+#'
+#' @return A data frame (tibble) with columns:
+#'   \describe{
+#'     \item{rot}{Rotation identifier.}
+#'     \item{Count}{Number of faculty evaluations for that rotation.}
+#'   }
+#'   Returns \code{NULL} if no matching rows are found.
+#'
+#' @examples
+#' \dontrun{
+#'   df_fac_eval <- count_fac_eval(resident_data, "John Doe")
+#' }
+#'
+#' @export
+count_fac_eval <- function(data, resident_name) {
+  plot_data <- data %>%
+    dplyr::filter(name == resident_name,
+                  redcap_repeat_instrument == "Faculty Evaluation") %>%
+    dplyr::group_by(rot) %>%
+    dplyr::summarize(Count = dplyr::n(), .groups = 'drop') %>%
+    stats::na.omit()
+
+  if (nrow(plot_data) == 0) {
+    return(NULL)
+  } else {
+    return(plot_data)
+  }
+}
+
+#' Compute Evaluation Progress
+#'
+#' @description Given a data set and a \code{count_function} (which should be either
+#'   \code{count_res_assessments} or another function returning a data frame with
+#'   columns \code{Level} and \code{Count}), this function calculates
+#'   cumulative progress toward a target of 25 evaluations.
+#'
+#' @param data A data frame of resident evaluations.
+#' @param resident_name A character string, the name of the resident of interest.
+#' @param count_function A function (e.g., \code{count_res_assessments}) that returns
+#'   summarized counts of evaluations by \code{Level}.
+#'
+#' @return A data frame with columns:
+#'   \describe{
+#'     \item{Level}{Resident level.}
+#'     \item{Total}{Total number of evaluations for this level.}
+#'     \item{Progress}{A percentage from 0--100.}
+#'   }
+#'   Returns \code{NULL} if the \code{count_function} returns \code{NULL}.
+#'
+#' @examples
+#' \dontrun{
+#'   progress_df <- compute_eval_progress(resident_data, "Jane Doe", count_res_assessments)
+#' }
+#'
+#' @export
+compute_eval_progress <- function(data, resident_name, count_function) {
+  plot_data <- count_function(data, resident_name)  # e.g. count_res_assessments()
+  if (is.null(plot_data)) {
+    return(NULL)
+  }
+
+  plot_data %>%
+    dplyr::group_by(Level) %>%
+    dplyr::summarize(Total = sum(Count, na.rm = TRUE), .groups = "drop") %>%
+    dplyr::mutate(Progress = pmin((.data$Total / 25) * 100, 100))
+}
+
+#' Generate Total Evaluation Plot
+#'
+#' @description Creates a stacked bar chart visualizing how many evaluations a resident has,
+#'   by evaluation type and rotation, faceted by level (if available).
+#'
+#' @param data A data frame, typically containing columns \code{name}, \code{Level},
+#'   \code{eval_type}, and \code{Rotation}.
+#' @param resident_name A character string, the name of the resident of interest.
+#'
+#' @details If the resident has no data or the \code{Level} column does not exist,
+#'   a default placeholder plot is returned.
+#'
+#' @return A \pkg{ggplot2} object (either a stacked bar chart, or a placeholder plot
+#'   if data is unavailable).
+#'
+#' @examples
+#' \dontrun{
+#'   p <- generate_tot_eval_plot(resident_data, "Jane Doe")
+#'   print(p)
+#' }
+#'
+#' @export
+generate_tot_eval_plot <- function(data, resident_name) {
+  plot_data <- count_res_assessments(data, resident_name)
+
+  if (is.null(plot_data) || !"Level" %in% colnames(plot_data) || all(is.na(plot_data$Level))) {
+    message("No valid `Level` data found! Displaying default plot.")
+
+    # Return a default placeholder plot
+    return(
+      ggplot2::ggplot(
+        data.frame(eval_type = c("Summative", "Observation", "Continuity Clinic"),
+                   Count = c(0, 0, 0)),
+        ggplot2::aes(x = .data$eval_type, y = .data$Count, fill = .data$eval_type)
+      ) +
+        ggplot2::geom_bar(stat = "identity", width = 0.6) +
+        ggplot2::scale_fill_manual(values = c("Summative" = "#E69F00",
+                                              "Observation" = "#56B4E9",
+                                              "Continuity Clinic" = "#009E73")) +
+        ggplot2::labs(title = "No Evaluations Yet", x = "Evaluation Type", y = "Number of Evaluations") +
+        ggplot2::theme_minimal()
+    )
+  }
+
+  ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$eval_type, y = .data$Count, fill = .data$Rotation)) +
+    ggplot2::geom_bar(stat = "identity", position = "stack", width = 0.6) +
+    ggplot2::scale_fill_brewer(palette = "Set2", limits = unique(plot_data$Rotation)[1:8]) +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(title = "Evaluations Completed by Level",
+                  x = "Evaluation Type",
+                  y = "Number of Evaluations",
+                  fill = "Rotation") +
+    ggplot2::coord_flip() +
+    ggplot2::facet_wrap(~Level, ncol = 1)
+}
+
+#' Display Progress Bars in a Shiny UI
+#'
+#' @description Creates a list of Bootstrap progress bars for each resident level,
+#'   given a data frame with columns \code{Level}, \code{Total}, and \code{Progress}.
+#'
+#' @param progress_data A data frame with columns:
+#'   \describe{
+#'     \item{Level}{Resident level (character).}
+#'     \item{Total}{Numeric total count of evaluations.}
+#'     \item{Progress}{Numeric percent (0--100) of completion.}
+#'   }
+#'
+#' @return A \code{\link[shiny]{tagList}} of \code{div}s suitable for rendering
+#'   in a Shiny UI.
+#'
+#' @examples
+#' \dontrun{
+#'   ui <- fluidPage(
+#'     uiOutput("progress_bars")
+#'   )
+#'
+#'   server <- function(input, output, session) {
+#'     progress_df <- data.frame(Level = c("PGY1","PGY2"), Total = c(10, 15), Progress = c(40, 60))
+#'     output$progress_bars <- renderUI({
+#'       display_progress(progress_df)
+#'     })
+#'   }
+#'   shinyApp(ui, server)
+#' }
+#'
+#' @export
+display_progress <- function(progress_data) {
+  if (is.null(progress_data) || nrow(progress_data) == 0) {
+    return(
+      htmltools::div(
+        "No evaluations completed yet.",
+        style = "text-align: center; font-size: 16px;"
+      )
+    )
+  }
+
+  htmltools::tagList(
+    lapply(seq_len(nrow(progress_data)), function(i) {
+      level <- progress_data$Level[i]
+      total <- progress_data$Total[i]
+      prog  <- progress_data$Progress[i]
+
+      htmltools::div(
+        style = "margin-bottom: 15px;",
+        htmltools::h5(level, style = "margin-bottom: 5px;"),
+        htmltools::div(
+          class = "progress",
+          htmltools::div(
+            class = "progress-bar",
+            role = "progressbar",
+            style = paste0("width: ", prog, "%;"),
+            `aria-valuenow` = prog,
+            `aria-valuemin` = "0",
+            `aria-valuemax` = "100",
+            paste0(prog, "%")
+          )
+        ),
+        htmltools::p(
+          paste("Evaluations Completed:", total),
+          style = "margin-top: 5px; font-size: 90%;"
+        )
+      )
+    })
+  )
+}
+
+#' Create a Stylized DataTable
+#'
+#' @description Returns a \code{\link[DT]{datatable}} with styling and hover effects,
+#'   optionally displaying a message if the data is empty.
+#'
+#' @param data A data frame or tibble to display.
+#' @param caption An optional string to use as the table caption.
+#'
+#' @return A \code{\link[DT]{datatable}} object styled with a specific look-and-feel.
+#'
+#' @examples
+#' \dontrun{
+#'   df <- data.frame(A = 1:3, B = c("x","y","z"))
+#'   create_styled_dt(df, caption = "Example Table")
+#' }
+#'
+#' @export
+create_styled_dt <- function(data, caption = NULL) {
+  if (nrow(data) == 0) {
+    return(
+      DT::datatable(
+        data.frame(Message = paste0("No ", tolower(caption), " data available")),
+        options = list(dom = 't'),
+        caption = caption,
+        rownames = FALSE
+      )
+    )
+  }
+
+  DT::datatable(
+    data,
+    options = list(
+      pageLength = 5,
+      dom = 'ftp',
+      scrollX = TRUE,
+      columnDefs = list(list(
+        targets = "_all",
+        render = DT::JS(
+          "function(data, type, row) {
+            if (data === null || data === '') {
+              return '<span style=\"color: #999; font-style: italic;\">Not provided</span>';
+            }
+            return data;
+          }"
+        )
+      ))
+    ),
+    caption = caption,
+    rownames = FALSE,
+    class = 'cell-border stripe hover'
+  ) %>%
+    DT::formatStyle(
+      columns = names(data),
+      backgroundColor = '#f8f9fa',
+      borderColor = '#dfe2e5'
+    )
+}
+
+#' Parse Labels for ip_obs_type
+#'
+#' @description Extracts only the textual labels for all possible choices
+#'   from the REDCap dictionary's \code{select_choices_or_calculations}
+#'   for a given field (default \code{"ip_obs_type"}).
+#'
+#' @param dict A data frame or tibble of your REDCap dictionary, must have
+#'   \code{field_name} and \code{select_choices_or_calculations}.
+#' @param ip_obs_field Character name of the field (default: \code{"ip_obs_type"}).
+#'
+#' @return A character vector of labels (e.g., "Written H&P", "Verbal presentation",
+#'   "Physical Exam").
+#'
+#' @examples
+#' \dontrun{
+#'   labels <- parse_ip_obs_labels(my_dict, "ip_obs_type")
+#'   print(labels)
+#' }
+#'
+#' @export
+parse_ip_obs_labels <- function(dict, ip_obs_field = "ip_obs_type") {
+  dict_row <- dict %>%
+    dplyr::filter(.data$field_name == ip_obs_field)
+
+  dict_string <- dict_row %>%
+    dplyr::pull(.data$select_choices_or_calculations) %>%
+    .[1]
+
+  # Split on '|'
+  choice_list <- stringr::str_split(dict_string, "\\|")[[1]]
+
+  # Trim each piece, discard empty lines
+  choice_list <- choice_list %>%
+    purrr::map_chr(stringr::str_trim) %>%
+    purrr::discard(~ .x == "")
+
+  # Parse out the label portion
+  labels_only <- purrr::map_chr(choice_list, ~ {
+    match <- stringr::str_match(.x, "^(\\d+)\\s*,\\s*(.*)$")
+    match[, 3]
+  })
+
+  labels_only <- labels_only[!is.na(labels_only)]
+  labels_only
+}
+
+#' Summarize Observations
+#'
+#' @description Given a data frame of observations (with a text column for \code{ip_obs_type}),
+#'   this function filters for one resident, counts how many times each type appears,
+#'   and ensures zero counts are shown for any labels that didn't appear.
+#'
+#' @param data A data frame with columns:
+#'   \describe{
+#'     \item{name}{Resident name.}
+#'     \item{ip_obs_type}{The observation type (e.g., numeric code or label).}
+#'   }
+#' @param resident The resident's name (character).
+#' @param labels A character vector of all possible labels (e.g. from \code{parse_ip_obs_labels}).
+#' @param ip_obs_field The column name in \code{data} storing the text label or code
+#'   (default \code{"ip_obs_type"}).
+#'
+#' @return A tibble with columns:
+#'   \describe{
+#'     \item{ip_obs_type_label}{The observation label.}
+#'     \item{Count}{How many times it appeared for that resident.}
+#'   }
+#'
+#' @examples
+#' \dontrun{
+#'   labels <- parse_ip_obs_labels(my_dict)
+#'   obs_summary <- summarize_observations(ass_dat, "John Doe", labels)
+#' }
+#'
+#' @export
+summarize_observations <- function(data,
+                                   resident,
+                                   labels,
+                                   ip_obs_field = "ip_obs_type") {
+  plot_data <- data %>%
+    dplyr::filter(.data$name == resident,
+                  !is.na(.data[[ip_obs_field]])) %>%
+    dplyr::mutate(temp_label = stringr::str_trim(.data[[ip_obs_field]])) %>%
+    dplyr::group_by(temp_label) %>%
+    dplyr::summarize(Count = dplyr::n(), .groups = "drop") %>%
+    dplyr::rename(ip_obs_type_label = temp_label)
+
+  all_labels <- tibble::tibble(ip_obs_type_label = labels)
+
+  final_df <- dplyr::left_join(all_labels, plot_data, by = "ip_obs_type_label") %>%
+    dplyr::mutate(Count = tidyr::replace_na(.data$Count, 0)) %>%
+    dplyr::arrange(factor(.data$ip_obs_type_label, levels = labels))
+
+  final_df
+}
+
+#' Compute Observation Progress
+#'
+#' @description Given a data frame of summarized observations, this function
+#'   computes a \code{Progress} column (as a percentage of a specified target).
+#'
+#' @param summarized_df A data frame with columns \code{ip_obs_type_label}
+#'   and \code{Count} (e.g., from \code{summarize_observations}).
+#' @param target Numeric, the number of observations at which progress should
+#'   be considered 100\%. Default is 5.
+#'
+#' @return The same data frame with an additional \code{Progress} column (integer 0--100).
+#'
+#' @examples
+#' \dontrun{
+#'   obs_summary <- summarize_observations(ass_dat, "Jane Doe", c("Written H&P", "Physical Exam"))
+#'   obs_progress <- compute_obs_progress(obs_summary, target = 5)
+#' }
+#'
+#' @export
+compute_obs_progress <- function(summarized_df, target = 5) {
+  if (nrow(summarized_df) == 0) {
+    return(summarized_df)
+  }
+
+  summarized_df %>%
+    dplyr::mutate(Progress = pmin(round((.data$Count / target) * 100), 100))
+}
+
+#' Prepare Progress Data for Display
+#'
+#' @description A convenience wrapper around \code{\link{compute_obs_progress}} that
+#'   renames columns to \code{Level} and \code{Total} for consistency with other
+#'   progress displays.
+#'
+#' @param summarized_df A data frame with columns \code{ip_obs_type_label} and \code{Count}.
+#' @param target Numeric, the number of observations for 100\%. Default is 5.
+#'
+#' @return A data frame with columns: \code{Level}, \code{Total}, and \code{Progress}.
+#'
+#' @examples
+#' \dontrun{
+#'   obs_summary <- summarize_observations(ass_dat, "John Doe", c("Written H&P","Physical Exam"))
+#'   final_progress <- prepare_progress_data(obs_summary, target = 5)
+#' }
+#'
+#' @export
+prepare_progress_data <- function(summarized_df, target = 5) {
+  summarized_df %>%
+    compute_obs_progress(target = target) %>%
+    dplyr::rename(Level = "ip_obs_type_label", Total = "Count")
+}
+
+#' Prepare and Display Observation Table
+#'
+#' @description A helper function that filters data for a specified resident and
+#'   observation type label, drops empty/unwanted columns, renames columns based on
+#'   the data dictionary, then returns a styled \code{\link[DT]{datatable}}.
+#'
+#' @param data A data frame of observations containing columns such as \code{name},
+#'   \code{ip_obs_type}, \code{Date}, etc.
+#' @param dict A data frame data dictionary with columns \code{field_name} and
+#'   \code{field_label}.
+#' @param resident A character string for the resident name.
+#' @param selected_label The chosen observation label to filter on. Must match the
+#'   strings in \code{ip_obs_type}.
+#' @param caption An optional caption for the output table. Defaults to
+#'   \code{"Details for: {selected_label}"} if \code{NULL}.
+#'
+#' @return A \code{\link[DT]{datatable}} object, styled by \code{\link{create_styled_dt}}.
+#'
+#' @examples
+#' \dontrun{
+#'   # If 'my_dict' is your REDCap dictionary and 'obs_data' is your main data:
+#'   output$obs_table <- DT::renderDT({
+#'     prep_obs_table(obs_data, my_dict, "John Doe", "Physical Exam")
+#'   })
+#' }
+#'
+#' @export
+prep_obs_table <- function(data,
+                           dict,
+                           resident,
+                           selected_label,
+                           caption = NULL) {
+  filtered_data <- data %>%
+    dplyr::filter(name == resident, ip_obs_type == selected_label)
+
+  if (nrow(filtered_data) == 0) {
+    return(create_styled_dt(
+      data.frame(),
+      caption = paste("No data for:", selected_label)
+    ))
+  }
+
+  always_include_cols <- c("Date", "ip_obs_type", "Level", "Evaluator")
+  non_empty <- colSums(!is.na(filtered_data)) > 0
+  non_empty[intersect(always_include_cols, names(filtered_data))] <- TRUE
+  final_data <- filtered_data[, non_empty, drop = FALSE]
+
+  unwanted_cols <- c(
+    "assess_a_resident_timestamp", "ass_date", "clin_context",
+    "slu_gim_att", "att_sign", "assess_a_resident_complete",
+    "week", "year", "name", "eval_type", "weekyr",
+    "start_year", "academic_year_start", "record_id", "ip_obs_type"
+  )
+  final_data <- final_data[, setdiff(names(final_data), unwanted_cols), drop = FALSE]
+
+  rename_map <- stats::setNames(dict$field_label, dict$field_name)
+  final_data <- dplyr::rename_with(
+    final_data,
+    .cols = dplyr::everything(),
+    .fn = ~ ifelse(.x %in% names(rename_map), rename_map[.x], .x)
+  )
+
+  front_cols <- c("Date", "Rotation", "Level")
+  front_cols <- intersect(front_cols, names(final_data))
+  other_cols <- setdiff(names(final_data), front_cols)
+  final_data <- final_data[, c(front_cols, other_cols), drop = FALSE]
+
+  create_styled_dt(
+    final_data,
+    caption = if (is.null(caption)) {
+      paste("Details for:", selected_label)
+    } else {
+      caption
+    }
+  )
+}
+
+
+
+#' Create a Styled DataTable for  Data
+#'
+#' Generates a DT::datatable object with custom styling and an optional caption.
+#'
+#' @param data A data frame of processed evaluation data.
+#' @param caption An optional character string for the table caption/title.
+#'
+#' @return A DT::datatable object with applied styling.
+#'
+#' @export
+create_styled_dt <- function(data, caption = NULL) {
+  if (nrow(data) == 0) {
+    return(DT::datatable(
+      data.frame(Message = paste0("No ", tolower(caption), " data available")),
+      options = list(dom = 't'),
+      caption = caption,
+      rownames = FALSE
+    ))
+  }
+
+  DT::datatable(
+    data,
+    options = list(
+      pageLength = 5,
+      dom = 'ftp',
+      scrollX = TRUE,
+      columnDefs = list(list(
+        targets = "_all",
+        render = DT::JS(
+          "function(data, type, row) {
+            if (data === null || data === '') {
+              return '<span style=\"color: #999; font-style: italic;\">Not provided</span>';
+            }
+            return data;
+          }"
+        )
+      ))
+    ),
+    caption = caption,
+    rownames = FALSE,
+    class = 'cell-border stripe hover'
+  ) %>%
+    DT::formatStyle(
+      columns = names(data),
+      backgroundColor = '#f8f9fa',
+      borderColor = '#dfe2e5'
+    )
+}
+
+
 
 #' Generate Plus-Delta Data
 #'
@@ -189,7 +780,7 @@ create_cc_table <- function(data, name) {
   )
 }
 
-#' Create a Styled DataTable for CC Evaluation Data
+#' Create a Styled DataTable for  Data
 #'
 #' Generates a DT::datatable object with custom styling and an optional caption.
 #'
@@ -403,3 +994,10 @@ process_cc_document_data <- function(data, resident_name) {
            `Notes clear` = cc_doc_notes,
            `Notes complete` = cc_doc_comp)
 }
+
+
+
+#'---------------------------------------------------------------------
+#'Observational Data Functions
+#'---------------------------------------------------------------------
+#'
