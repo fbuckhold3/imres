@@ -2,8 +2,7 @@
 % Please edit documentation in R/function_assessment.R
 \name{generate_p_d}
 \alias{generate_p_d}
-\title{Assessment Visualization
-The following contains functions used in various applications for visualizing data regarding assessment of residents. Includes general plus delta data, continuity clinic, inpatient, and observation assessments, with more to be added as needed.}
+\title{Generate Plus-Delta Data}
 \usage{
 generate_p_d(data, resident)
 }
@@ -17,8 +16,5 @@ A data frame containing the Date, Rotation, Level, Plus (renamed from cc_res_doe
 Delta (renamed from res_to_improve), Feedback (renamed from min_giv_feedback), and Evaluator for the resident.
 }
 \description{
-Generate Plus-Delta Data
-}
-\details{
 Filters and processes the input data to extract plus-delta evaluations for a specific resident.
 }

@@ -2,8 +2,12 @@
 % Please edit documentation in R/function_assessment.R
 \name{create_styled_dt}
 \alias{create_styled_dt}
-\title{Create a Styled DataTable for CC Evaluation Data}
+\title{Create a Stylized DataTable}
 \usage{
+create_styled_dt(data, caption = NULL)
+
+create_styled_dt(data, caption = NULL)
+
 create_styled_dt(data, caption = NULL)
 }
 \arguments{
@@ -12,8 +16,24 @@ create_styled_dt(data, caption = NULL)
 \item{caption}{An optional character string for the table caption/title.}
 }
 \value{
+A \code{\link[DT]{datatable}} object styled with a specific look-and-feel.
+
+A DT::datatable object with applied styling.
+
 A DT::datatable object with applied styling.
 }
 \description{
+Returns a \code{\link[DT]{datatable}} with styling and hover effects,
+  optionally displaying a message if the data is empty.
+
 Generates a DT::datatable object with custom styling and an optional caption.
+
+Generates a DT::datatable object with custom styling and an optional caption.
+}
+\examples{
+\dontrun{
+  df <- data.frame(A = 1:3, B = c("x","y","z"))
+  create_styled_dt(df, caption = "Example Table")
+}
+
 }
