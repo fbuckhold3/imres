@@ -996,8 +996,92 @@ process_cc_document_data <- function(data, resident_name) {
 }
 
 
-
-#'---------------------------------------------------------------------
-#'Observational Data Functions
-#'---------------------------------------------------------------------
+#' @export
+#' @title Pull & Split Inpatient Evaluations (Intern vs. Resident)
+#' @description
+#'   1. Filter data to a particular resident.
+#'   2. Keep only core columns + any columns that start with "int_ip_" or "res_ip_".
+#'   3. Split into two data frames:
+#'      - intern_df: rows that have at least one non-NA in "int_ip_" columns
+#'      - resident_df: rows that have at least one non-NA in "res_ip_" columns
+#'   4. Drop columns that are entirely NA in each subset.
+#'   5. Rename columns using your REDCap dictionary.
+#'   6. Return a list with both data frames.
 #'
+#' @param data A data frame with columns:
+#'   - `name` (resident name)
+#'   - `Date`, `Level`, `Evaluator`, `Rotation`
+#'   - zero or more columns starting with `int_ip_` or `res_ip_`
+#' @param dict A data frame (dictionary) with `field_name` and `field_label`.
+#' @param resident Character name for the resident (e.g., "Adam Streicher").
+#'
+#' @return A list with two data frames: `$intern_df` and `$resident_df`.
+pull_inpatient_eval_split <- function(data, dict, resident) {
+
+  # 1) Filter for the given resident
+  filtered <- data %>%
+    filter(name == resident)
+
+  # 2) Identify "core" columns
+  keep_core <- c("Date", "Level", "Evaluator", "Rotation")
+
+  # 3) Find columns starting with "int_ip_" or "res_ip_"
+  ip_cols <- grep("^(int_ip_|res_ip_)", names(filtered), value = TRUE)
+
+  # If you expect at least one, proceed. If ip_cols is empty, you'll get no results
+  # but it's safe to continue.
+
+  # 4) Subset to those columns + core columns
+  out <- filtered %>%
+    select(any_of(keep_core), any_of(ip_cols)) %>%
+    # drop columns that are ALL NA
+    select(where(~ any(!is.na(.))))
+
+  # 5) Separate the columns into "int_ip_" subset vs "res_ip_" subset
+  int_cols <- grep("^int_ip_", names(out), value = TRUE)
+  res_cols <- grep("^res_ip_", names(out), value = TRUE)
+
+  # We still keep the core columns in each subset
+  # So each subset = core columns + its own "ip" columns
+
+  # 5a) Rows for intern subset: any row that has at least one non-NA in the int_ip_ columns
+  intern_rows <- rep(FALSE, nrow(out))
+  if (length(int_cols) > 0) {
+    intern_rows <- rowSums(!is.na(out[, int_cols, drop=FALSE])) > 0
+  }
+  intern_df <- out[intern_rows, c(keep_core, int_cols), drop=FALSE]
+
+  # drop columns that are entirely NA
+  intern_df <- intern_df %>%
+    select(where(~ any(!is.na(.))))
+
+  # 5b) Rows for resident subset: any row that has at least one non-NA in the res_ip_ columns
+  resident_rows <- rep(FALSE, nrow(out))
+  if (length(res_cols) > 0) {
+    resident_rows <- rowSums(!is.na(out[, res_cols, drop=FALSE])) > 0
+  }
+  resident_df <- out[resident_rows, c(keep_core, res_cols), drop=FALSE]
+
+  resident_df <- resident_df %>%
+    select(where(~ any(!is.na(.))))
+
+  # 6) Rename columns using your dictionary in each subset
+  setnames(
+    intern_df,
+    old = dict$field_name,
+    new = dict$field_label,
+    skip_absent = TRUE
+  )
+  setnames(
+    resident_df,
+    old = dict$field_name,
+    new = dict$field_label,
+    skip_absent = TRUE
+  )
+
+  # 7) Return them both as a list
+  list(
+    intern_df   = intern_df,
+    resident_df = resident_df
+  )
+}
