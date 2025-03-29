@@ -661,11 +661,11 @@ create_cc_table <- function(data, name) {
     dplyr::filter(name == !!name, !is.na(cc_eval_type)) %>%
     dplyr::arrange(Level)
 
-  result_df <- data.frame(Level = unique(filtered_data$Level), stringsAsFactors = FALSE)
+  # Always include all three levels
+  result_df <- data.frame(Level = c("Intern", "PGY2", "PGY3"), stringsAsFactors = FALSE)
 
-  if (nrow(result_df) == 0) {
-    result_df <- data.frame(Level = "No data available", stringsAsFactors = FALSE)
-  }
+
+  # Loop over each standard evaluation type to populate the table
 
   for (i in 1:length(standard_eval_types)) {
     et <- standard_eval_types[i]
