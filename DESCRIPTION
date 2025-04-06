@@ -7,6 +7,7 @@ Maintainer: Fred Buckhold <fred.buckhold@health.slu.edu>
 Description:This serves as a support package for various shiny apps intending for a residency data management platform. This is initially to be used for the local residency with a conception towards scale. Many functions will be used in various dashboards but in this package form to reduce code complexity with uploading into shiny apps. 
 License: MIT
 Imports: 
+    bslib,
     devtools,
     dplyr,
     DT, 
@@ -14,6 +15,8 @@ Imports:
     jsonlite,
     lubridate,
     pkgdown,
+    htmltools,
+    reactable,
     readr,
     REDCapR,
     roxygen2,
