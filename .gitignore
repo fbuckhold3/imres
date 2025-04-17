@@ -6,3 +6,6 @@
 .httr-oauth
 .DS_Store
 .quarto
+test_data.rds
+test_s_miles.rds
+test_p_miles.rds

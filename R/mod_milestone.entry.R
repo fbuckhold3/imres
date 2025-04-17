@@ -127,9 +127,7 @@ mod_miles_rating_server <- function(id, period) {
     uiState <- reactive({
       if (is.null(period()) || period() == "") {
         "none"
-      } else if (period() == "Interim Review") {
-        "interim"
-      } else {
+      }  else {
         "active"
       }
     })
@@ -215,9 +213,6 @@ mod_miles_rating_server <- function(id, period) {
     output$mainContent <- renderUI({
       if (uiState() == "none") {
         return(div("Please select a period to begin."))
-      }
-      if (uiState() == "interim") {
-        return(div("Milestone ratings are not necessary with interim reviews."))
       }
       req(currentImageFile())
       currentSelection <- state$selections[[ selectionKey() ]]
