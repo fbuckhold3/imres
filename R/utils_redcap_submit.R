@@ -153,7 +153,8 @@ generate_new_instance <- function(record_id, instrument_name, coach_data, redcap
       redcap_uri = redcap_uri,
       token = token,
       fields = c("record_id", "redcap_repeat_instrument", "redcap_repeat_instance"),
-      exportRepeatingInstrumentsAndEvents = TRUE
+      export_repeating_instruments = TRUE,
+      export_repeating_events     = TRUE
     )$data
   }, error = function(e) {
     message(" Error pulling REDCap data: ", e$message)
