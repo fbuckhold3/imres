@@ -14,7 +14,9 @@ mod_miles_rating_ui <- function(id) {
         uiOutput(ns("progressSection")),
         uiOutput(ns("mainContent")),
         uiOutput(ns("navigationButtons")),
-        uiOutput(ns("resultsCard"))
+        uiOutput(ns("resultsCard")),
+
+        actionButton(ns("done"), "Submit Milestones", class = "btn-success")
     )
   )
 }
@@ -95,11 +97,12 @@ mod_miles_rating_server <- function(id, period) {
 
     # STATE MANAGEMENT
     state <- reactiveValues(
-      currentSetIndex = 1,
+      currentSetIndex   = 1,
       currentImageIndex = 1,
-      showingSummary = FALSE,
-      selections = list(),       # Confirmed selections per image.
-      pendingSelection = NULL    # Temporarily holds a selection needing explanation.
+      showingSummary    = FALSE,
+      selections        = list(),  # numeric scores
+      descriptions      = list(),  # text explanations per milestone
+      pendingSelection  = NULL     # holds list(key=…, value=…) when an explanation is needed
     )
 
     # Derived reactives.
@@ -304,14 +307,14 @@ mod_miles_rating_server <- function(id, period) {
     # MODAL HANDLERS
     observeEvent(input$submit_explanation, {
       req(input$explanation)
-      if (trimws(input$explanation) == "") {
-        showNotification("Please enter an explanation.", type = "error")
-        return()
-      }
-      if (!is.null(state$pendingSelection)) {
-        state$selections[[state$pendingSelection$key]] <- state$pendingSelection$value
-        state$pendingSelection <- NULL
-      }
+      key <- state$pendingSelection$key
+      val <- state$pendingSelection$value
+
+      # store BOTH the score and the text
+      state$selections[[key]]    <- val
+      state$descriptions[[key]]  <- input$explanation
+
+      state$pendingSelection <- NULL
       removeModal()
     })
 
@@ -372,6 +375,9 @@ mod_miles_rating_server <- function(id, period) {
     })
 
     # Return reactive selections for use in the parent app.
-    return(reactive(state$selections))
+    return(list(
+      scores = reactive(state$selections),
+      desc   = reactive(state$descriptions)
+    ))
   })
 }
