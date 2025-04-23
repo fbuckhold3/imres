@@ -376,6 +376,7 @@ mod_miles_rating_server <- function(id, period) {
 
     # Return reactive selections for use in the parent app.
     return(list(
+      done   = reactive(input$done),
       scores = reactive(state$selections),
       desc   = reactive(state$descriptions)
     ))
