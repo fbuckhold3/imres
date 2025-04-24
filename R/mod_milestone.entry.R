@@ -15,7 +15,13 @@ mod_miles_rating_ui <- function(id) {
         uiOutput(ns("mainContent")),
         uiOutput(ns("navigationButtons")),
         uiOutput(ns("resultsCard")),
-        actionButton(ns("done"), "Submit Milestones", class = "btn-success")
+        # Make the submit button more prominent and always visible at the bottom
+        div(
+          class = "mt-4 text-center",
+          actionButton(ns("done"), "Submit Milestones",
+                       class = "btn-success btn-lg",
+                       style = "width: 50%;")
+        )
     )
   )
 }
@@ -50,7 +56,25 @@ mod_miles_rating_server <- function(id, period) {
       # "Interim Review" is handled separately.
     )
 
-    # IMAGE SETS (ensure your image files are in the "www" folder)
+    # Helper function to get correct image path from the package
+    getImagePath <- function(filename) {
+      # Try to find the image in the package
+      pkgPath <- system.file("www", filename, package = "imres")
+
+      # If not found in package, try local www directory
+      if (pkgPath == "") {
+        if (file.exists(file.path("www", filename))) {
+          return(file.path("www", filename))
+        } else {
+          # Fallback to a direct path that might be in the app's www directory
+          return(filename)
+        }
+      }
+
+      return(pkgPath)
+    }
+
+    # IMAGE SETS
     imageSets <- list(
       PC = list(
         title = "Patient Care",
@@ -264,8 +288,11 @@ mod_miles_rating_server <- function(id, period) {
       if (uiState() != "active") return()
       req(currentImageFile())
       output$mainImage <- renderImage({
+        # Get the image path using our helper function
+        imagePath <- getImagePath(currentImageFile())
+
         list(
-          src = file.path("www", currentImageFile()),
+          src = imagePath,
           width = 1200,
           height = "auto",
           alt = paste("Image", state$currentImageIndex)
@@ -294,8 +321,8 @@ mod_miles_rating_server <- function(id, period) {
                 textInput(ns("explanation"),
                           label = "Congratulations. This is advanced for a resident at your level. Please explain your rationale:"),
                 footer = tagList(
-                  actionButton(ns("cancel_explanation"), "Cancel"),
-                  actionButton(ns("submit_explanation"), "Submit")
+                  modalButton("Cancel", id = ns("cancel_explanation")),
+                  actionButton(ns("submit_explanation"), "Submit", class = "btn-primary")
                 ),
                 easyClose = FALSE
               ))
@@ -306,8 +333,9 @@ mod_miles_rating_server <- function(id, period) {
     })
 
     # MODAL HANDLERS
+    # Fixed modal handling - observe the submit button separately
     observeEvent(input$submit_explanation, {
-      req(input$explanation)
+      req(state$pendingSelection, input$explanation)
       key <- state$pendingSelection$key
       val <- state$pendingSelection$value
 
@@ -319,10 +347,16 @@ mod_miles_rating_server <- function(id, period) {
       removeModal()
     })
 
+    # We observe when the modal is closed via the cancel button or X - this ensures it always works
     observeEvent(input$cancel_explanation, {
       state$pendingSelection <- NULL
       removeModal()
     })
+
+    # Also handle modal dismissal with the ESC key or clicking outside
+    observeEvent(input$explanation_modal_dismiss, {
+      state$pendingSelection <- NULL
+    }, ignoreInit = TRUE)
 
     # NAVIGATION EVENTS
     nextImage <- function() {
@@ -353,10 +387,41 @@ mod_miles_rating_server <- function(id, period) {
 
     observeEvent(input$summaryButton, {
       state$showingSummary <- TRUE
+
+      # Display a modal with the summary
+      showModal(modalDialog(
+        title = "Milestone Ratings Summary",
+        verbatimTextOutput(ns("modalSummary")),
+        footer = tagList(
+          modalButton("Close", id = ns("close_summary"))
+        ),
+        size = "l",
+        easyClose = TRUE
+      ))
     })
 
-    observeEvent(input$continueButton, {
-      state$showingSummary <- FALSE
+    # Render the summary in the modal
+    output$modalSummary <- renderPrint({
+      allSelections <- state$selections
+      if (length(allSelections) == 0) return("No selections made yet")
+
+      result <- character()
+      for (key in names(allSelections)) {
+        parts <- strsplit(key, "_")[[1]]
+        setName <- parts[1]
+        index <- as.numeric(parts[2])
+        desc <- state$descriptions[[key]]
+        description_text <- if (!is.null(desc) && desc != "") {
+          paste0(" - Explanation: ", desc)
+        } else {
+          ""
+        }
+
+        result <- c(result, paste0(setName, " Image ", index, " (",
+                                   imageSets[[setName]]$imageTitles[index], "): ",
+                                   allSelections[[key]], description_text))
+      }
+      paste(result, collapse = "\n")
     })
 
     output$selectionSummary <- renderPrint({
@@ -383,3 +448,7 @@ mod_miles_rating_server <- function(id, period) {
     ))
   })
 }
+
+
+
+
