@@ -316,12 +316,13 @@ mod_miles_rating_server <- function(id, period) {
               state$selections[[key]] <- i_local
             } else {
               state$pendingSelection <- list(key = key, value = i_local)
+              # Replace this section in your code:
               showModal(modalDialog(
                 title = paste("Explanation for score", i_local),
                 textInput(ns("explanation"),
                           label = "Congratulations. This is advanced for a resident at your level. Please explain your rationale:"),
                 footer = tagList(
-                  modalButton("Cancel", id = ns("cancel_explanation")),
+                  modalButton("Cancel"),  # Remove the id parameter here
                   actionButton(ns("submit_explanation"), "Submit", class = "btn-primary")
                 ),
                 easyClose = FALSE
@@ -340,23 +341,21 @@ mod_miles_rating_server <- function(id, period) {
       val <- state$pendingSelection$value
 
       # store BOTH the score and the text
-      state$selections[[key]]    <- val
-      state$descriptions[[key]]  <- input$explanation
+      state$selections[[key]] <- val
+      state$descriptions[[key]] <- input$explanation
 
       state$pendingSelection <- NULL
       removeModal()
     })
 
-    # We observe when the modal is closed via the cancel button or X - this ensures it always works
-    observeEvent(input$cancel_explanation, {
-      state$pendingSelection <- NULL
-      removeModal()
-    })
-
-    # Also handle modal dismissal with the ESC key or clicking outside
-    observeEvent(input$explanation_modal_dismiss, {
-      state$pendingSelection <- NULL
+    observeEvent(input$explanation, {
+      # This will run whenever the explanation input changes
     }, ignoreInit = TRUE)
+
+
+    observeEvent(input$cancel_modal, {
+      state$pendingSelection <- NULL
+    })
 
     # NAVIGATION EVENTS
     nextImage <- function() {
