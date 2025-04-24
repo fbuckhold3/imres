@@ -9,13 +9,12 @@
 #' @export
 mod_miles_rating_ui <- function(id) {
   ns <- NS(id)
-  fluidPage(
+  tagList(
     div(id = ns("moduleContainer"),
         uiOutput(ns("progressSection")),
         uiOutput(ns("mainContent")),
         uiOutput(ns("navigationButtons")),
         uiOutput(ns("resultsCard")),
-
         actionButton(ns("done"), "Submit Milestones", class = "btn-success")
     )
   )
@@ -67,11 +66,13 @@ mod_miles_rating_server <- function(id, period) {
                         "Knowledge of Diagnostic Testing")
       ),
       SBP = list(
-        title = "Systems-Based Practice",
-        images = c("sbp1.png", "spb2.png", "sbp3.png"),
-        imageTitles = c("Patient Safety and Quality Improvement",
-                        "System Navigation for Patient-Centered Care",
-                        "Physician Role in Health Care Systems")
+        title       = "Systems-Based Practice",
+        images      = c("sbp1.png", "sbp2.png", "sbp3.png"),  # was "spb2.png"
+        imageTitles = c(
+          "Patient Safety and Quality Improvement",
+          "System Navigation for Patient-Centered Care",
+          "Physician Role in Health Care Systems"
+        )
       ),
       PBLI = list(
         title = "Practice-Based Learning and Improvement",
