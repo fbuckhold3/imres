@@ -2,17 +2,13 @@
 % Please edit documentation in R/mod_milestone.entry.R
 \name{mod_miles_rating_ui}
 \alias{mod_miles_rating_ui}
-\title{Module UI for Milestone Rating}
+\title{Module UI for Milestone Rating (simplified version)}
 \usage{
 mod_miles_rating_ui(id)
 }
 \arguments{
-\item{id}{A character string specifying the module ID.}
-}
-\value{
-A Shiny UI element containing the milestone rating interface.
+\item{id}{module id}
 }
 \description{
-This function creates a namespaced UI for the milestone rating interface.
-It does not include period selection; instead, the period is supplied externally.
+Module UI for Milestone Rating (simplified version)
 }

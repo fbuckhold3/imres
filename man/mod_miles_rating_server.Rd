@@ -2,23 +2,15 @@
 % Please edit documentation in R/mod_milestone.entry.R
 \name{mod_miles_rating_server}
 \alias{mod_miles_rating_server}
-\title{Module Server for Milestone Rating}
+\title{Module Server for Milestone Rating (simplified version)}
 \usage{
 mod_miles_rating_server(id, period)
 }
 \arguments{
-\item{id}{A character string specifying the module ID.}
+\item{id}{module id}
 
-\item{period}{A reactive expression returning the selected period.}
-}
-\value{
-A reactive expression containing the collected selections.
+\item{period}{reactive returning the selected period}
 }
 \description{
-This function encapsulates all server-side logic for the milestone rating
-interface. It expects an externally provided reactive period. Until a valid
-period is supplied, a blank screen (or prompt) is shown. If the period is
-"Interim Review," a message is displayed stating that milestone ratings are not
-necessary. Otherwise, the full rating interface is rendered and the user cannot
-proceed to the next milestone until a selection is made on the current one.
+Module Server for Milestone Rating (simplified version)
 }
