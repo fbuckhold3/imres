@@ -1,5 +1,4 @@
 #' Module UI for Milestone Rating (simplified version)
-#'
 #' @param id module id
 #' @export
 mod_miles_rating_ui <- function(id) {
