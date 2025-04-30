@@ -1,3 +1,6 @@
+#' @param x Gets choices
+#' @return  Breaks up strings
+#' @export
 parse_choices <- function(raw) {
   # raw is a string like "1, Option A | 2, Option B"
   items <- strsplit(raw, "\\|")[[1]]

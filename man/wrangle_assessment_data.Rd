@@ -25,7 +25,7 @@ These utilities are used to prepare data for Shiny apps and data visualizations.
 
 Wrangle Resident Assessment Data
 
-Cleans and processes raw resident assessment data by coalescing columns, 
+Cleans and processes raw resident assessment data by coalescing columns,
 creating week-based evaluation bins, and identifying academic years and PGY levels.
 
 **Key Steps:**

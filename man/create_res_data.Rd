@@ -15,8 +15,8 @@ create_res_data(assess_data, rdm_data)
 A dataframe with complete 'name' and 'record_id' for every row.
 }
 \description{
-Combines and processes the assessment data with resident name identifier data 
-to ensure each row has a complete 'name' and 'record_id'. 
+Combines and processes the assessment data with resident name identifier data
+to ensure each row has a complete 'name' and 'record_id'.
 Also, fills in 'att' (attending) and 'rot' (rotation) columns.
 }
 \examples{
