@@ -59,7 +59,7 @@ mod_miles_rating_server <- function(id, period) {
       ),
       PBLI = list(
         title = "Practice-Based Learning and Improvement",
-        images = c("pbli1.png","pbli2.png"),  # Fixed typo in image name from pbl2.png to pbli2.png
+        images = c("pbli1.png","pbli2.png"),
         imageTitles = c("Evidence-Based and Informed Practice","Reflective Practice and Commitment to Personal Growth")
       ),
       PROF = list(
@@ -83,8 +83,7 @@ mod_miles_rating_server <- function(id, period) {
       currentImageIndex = 1,
       selections        = list(),
       descriptions      = list(),
-      pendingSelection  = list(key = NULL, value = NULL),
-      currentExplanation = NULL  # Added to track current explanation text
+      pendingSelection  = list(key = NULL, value = NULL)
     )
 
     # helpers
@@ -141,7 +140,7 @@ mod_miles_rating_server <- function(id, period) {
       if (is.null(period()) || period()=="") "none" else "active"
     })
 
-    # progress UI - now with only the progress bar, no text summary
+    # progress UI
     output$progressSection <- renderUI({
       req(uiState()=="active")
       pct <- round(100 * imagesDone()/totalImages(), 1)
@@ -182,7 +181,7 @@ mod_miles_rating_server <- function(id, period) {
       }
     })
 
-    # main image + score buttons + inline explain placeholder
+    # main image + score buttons
     output$mainContent <- renderUI({
       if (uiState()=="none") return(div("Please select a period to begin."))
       key <- selectionKey()
@@ -205,7 +204,7 @@ mod_miles_rating_server <- function(id, period) {
                           tags$button(id=ns(paste0("box_",i)),
                                       class="action-button",
                                       style=paste0("width:30px;height:30px;padding:0;
-                                                   background:",bg,";color:",clr,";"),
+                                               background:",bg,";color:",clr,";"),
                                       HTML("&nbsp;")
                           )
                       )
@@ -220,45 +219,46 @@ mod_miles_rating_server <- function(id, period) {
       req(uiState()=="active", currentImageFile())
       output$mainImage <- renderImage({
         list(src = system.file("www", currentImageFile(), package="imres"),
-             width = "1225px",  # 40% larger than before (800px * 1.4 = 1120px)
+             width = "1200px",
              height = "auto",
              alt=currentImageFile())
       }, deleteFile=FALSE)
     })
 
-    # Update explanation text field when navigating
+    # Handle explanation UI updates
     observe({
       req(uiState() == "active")
       key <- selectionKey()
+      sel <- state$selections[[key]]  # Get current selection
 
-      # Load existing explanation if available
-      if (key %in% names(state$descriptions)) {
-        state$currentExplanation <- state$descriptions[[key]]
+      # Only proceed with explanation UI if we have a selection
+      if (!is.null(sel)) {
+        period <- period()
+        needsExplanation <- !is.null(thresholds[[period]]) &&
+          sel >= thresholds[[period]] &&
+          period != "Interim Review"
+
+        if (needsExplanation) {
+          # Load existing explanation for this specific key if it exists
+          existingExplanation <- if(key %in% names(state$descriptions)) state$descriptions[[key]] else NULL
+
+          output$explanationUI <- renderUI({
+            textAreaInput(ns("explanation"),
+                          "This rating is a bit higher than expected for your level of training (which may be deserving). Please take a moment to justify this rating.",
+                          value = existingExplanation,
+                          rows = 3,
+                          width = "100%")
+          })
+        } else {
+          output$explanationUI <- renderUI(NULL)
+        }
       } else {
-        state$currentExplanation <- NULL
-      }
-
-      # Check if explanation is needed
-      period <- period()
-      sel <- state$selections[[key]]
-
-      if (!is.null(sel) && !is.null(thresholds[[period]]) &&
-          sel >= thresholds[[period]] && period != "Interim Review") {
-        # Show explanation box with existing text if available
-        output$explanationUI <- renderUI({
-          textAreaInput(ns("explanation"),
-                        "This rating is a bit higher than expected for your level of training (which may be deserving). Please take a moment to justify this rating.",
-                        value = state$currentExplanation,
-                        rows = 3,
-                        width = "100%")
-        })
-      } else {
-        # Clear explanation UI if not needed
+        # No selection yet, so no explanation UI
         output$explanationUI <- renderUI(NULL)
       }
     })
 
-    # navigation buttons - simplified and modified to handle explanation
+    # navigation buttons
     output$navigationButtons <- renderUI({
       req(uiState()=="active")
       key <- selectionKey()
@@ -288,7 +288,7 @@ mod_miles_rating_server <- function(id, period) {
       )
     })
 
-    # reacting to score clicks
+    # Score click handler
     observe({
       req(uiState()=="active")
       for (i in 1:9) {
@@ -297,52 +297,78 @@ mod_miles_rating_server <- function(id, period) {
           observeEvent(input[[paste0("box_",ii)]], {
             key    <- selectionKey()
             period <- period()
-            overTh <- !is.null(thresholds[[period]]) && ii >= thresholds[[period]] && period != "Interim Review"
+            overTh <- !is.null(thresholds[[period]]) &&
+              ii >= thresholds[[period]] &&
+              period != "Interim Review"
 
-            # always save the numeric
+            # Save the numeric score
             state$selections[[key]] <- ii
 
-            if (!overTh) {
-              # clear any leftover explain‐UI
-              output$explanationUI <- renderUI(NULL)
-              state$descriptions[[key]] <- NULL
-              state$pendingSelection <- list(key=NULL, value=NULL)
-              state$currentExplanation <- NULL
-            } else {
-              # require explanation inline
+            # Update pending selection if explanation needed
+            if (overTh) {
               state$pendingSelection <- list(key=key, value=ii)
-              state$currentExplanation <- state$descriptions[[key]] # Existing explanation if any
-              output$explanationUI <- renderUI({
-                textAreaInput(ns("explanation"),
-                              "This rating is a bit higher than expected for your level of training (which may be deserving). Please take a moment to justify this rating.",
-                              value = state$currentExplanation,
-                              rows = 3,
-                              width = "100%")
-              })
+            } else {
+              state$pendingSelection <- list(key=NULL, value=NULL)
+              state$descriptions[[key]] <- NULL  # Clear any existing description if no longer needed
             }
           }, ignoreInit=TRUE)
         })
       }
     })
 
-    # Watch for explanation changes and save them when they occur
-    observe({
-      req(input$explanation, state$pendingSelection$key)
-      if(!is.null(input$explanation) && nzchar(trimws(input$explanation))) {
-        state$descriptions[[state$pendingSelection$key]] <- input$explanation
-        state$currentExplanation <- input$explanation
+    # Next button handler
+    observeEvent(input[["next"]], {
+      key <- selectionKey()
+
+      if (is.null(state$selections[[key]])) {
+        showNotification("Pick a score first", type="error")
+        return()
       }
+
+      # Check if explanation is needed
+      period <- period()
+      sel <- state$selections[[key]]
+      needsExplanation <- !is.null(sel) &&
+        !is.null(thresholds[[period]]) &&
+        sel >= thresholds[[period]] &&
+        period != "Interim Review"
+
+      if (needsExplanation) {
+        # Save current explanation if it exists
+        if (!is.null(input$explanation) && nzchar(trimws(input$explanation))) {
+          state$descriptions[[key]] <- input$explanation
+        }
+
+        # Check if explanation is required but missing
+        if (is.null(state$descriptions[[key]]) ||
+            trimws(state$descriptions[[key]]) == "") {
+          showNotification("Please provide an explanation for this rating", type="error")
+          return()
+        }
+      }
+
+      # If we get here, we can proceed with navigation
+      if (state$currentImageIndex < length(currentSet()$images)) {
+        state$currentImageIndex <- state$currentImageIndex + 1
+      } else if (state$currentSetIndex < length(imageSets)) {
+        state$currentSetIndex <- state$currentSetIndex + 1
+        state$currentImageIndex <- 1
+      }
+
+      # Reset pending selection after successful navigation
+      state$pendingSelection <- list(key = NULL, value = NULL)
     })
 
-    # prev/next - with fixed "next" keyword issue and explanation handling
+    # Previous button handler
     observeEvent(input$prev, {
-      # Save current explanation if it exists and is needed
       key <- selectionKey()
-      if(!is.null(input$explanation) && nzchar(trimws(input$explanation)) &&
-         !is.null(state$pendingSelection$key) && state$pendingSelection$key == key) {
+
+      # Save current explanation if needed
+      if (!is.null(input$explanation) && nzchar(trimws(input$explanation))) {
         state$descriptions[[key]] <- input$explanation
       }
 
+      # Navigate
       if (state$currentImageIndex > 1) {
         state$currentImageIndex <- state$currentImageIndex - 1
       } else if (state$currentSetIndex > 1) {
@@ -350,45 +376,11 @@ mod_miles_rating_server <- function(id, period) {
         state$currentImageIndex <- length(imageSets[[state$currentSetIndex]]$images)
       }
 
-      # Clear pending selection when navigating
+      # Reset pending selection after navigation
       state$pendingSelection <- list(key = NULL, value = NULL)
     })
 
-    observeEvent(input[["next"]], {
-      key <- selectionKey()
-
-      if (is.null(state$selections[[key]])) {
-        showNotification("Pick a score first", type="error")
-      } else {
-        # Check if explanation is needed
-        period <- period()
-        sel <- state$selections[[key]]
-        needsExplanation <- !is.null(sel) && !is.null(thresholds[[period]]) &&
-          sel >= thresholds[[period]] && period != "Interim Review"
-
-        if (needsExplanation && (is.null(input$explanation) || trimws(input$explanation) == "")) {
-          showNotification("Please provide an explanation for this rating", type="error")
-        } else {
-          # Save explanation if needed
-          if (needsExplanation && !is.null(input$explanation) && nzchar(trimws(input$explanation))) {
-            state$descriptions[[key]] <- input$explanation
-          }
-
-          # Navigate to next
-          if (state$currentImageIndex < length(currentSet()$images)) {
-            state$currentImageIndex <- state$currentImageIndex + 1
-          } else if (state$currentSetIndex < length(imageSets)) {
-            state$currentSetIndex <- state$currentSetIndex + 1
-            state$currentImageIndex <- 1
-          }
-
-          # Clear pending selection when navigating
-          state$pendingSelection <- list(key = NULL, value = NULL)
-        }
-      }
-    })
-
-    # Handle the done button to prevent "subscript out of bounds" error
+    # Handle the done button
     observeEvent(input$done, {
       # Just trigger the event without any subscript calls that might cause issues
     })
